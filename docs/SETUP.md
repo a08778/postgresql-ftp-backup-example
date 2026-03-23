@@ -1,33 +1,61 @@
 # Setup Guide
 
-This guide explains how to configure PostgreSQL FTP backup scripts on Ubuntu.
-
-## 1. Install required packages
+## 1. Install dependencies
 
 ```bash
 sudo apt update
-sudo apt install postgresql-client curlftpfs fuse bsd-mailx
+sudo apt install -y git postgresql-client curlftpfs fuse bsd-mailx
 ```
 
-## 2. Create FTP directory
-
-Ensure your FTP server has a directory (e.g. `pg`) where backups will be stored.
-
-## 3. Create environment file
+Optional (for email support):
 
 ```bash
-sudo nano /etc/pg-backup.env
+sudo apt install -y postfix
 ```
 
-Example:
+---
+
+## 2. Clone repository
+
+```bash
+cd /opt
+sudo git clone https://github.com/a08778/postgresql-ftp-backup-example.git
+sudo chown -R $USER:$USER /opt/postgresql-ftp-backup-example
+cd /opt/postgresql-ftp-backup-example
+```
+
+---
+
+## 3. Fix permissions
+
+```bash
+chmod +x scripts/backup_to_ftp.sh
+chmod +x scripts/check_remote_backup.sh
+```
+
+If you see "Permission denied":
+
+```bash
+bash ./scripts/backup_to_ftp.sh
+```
+
+---
+
+## 4. Create environment file
+
+```bash
+sudo vi /etc/pg-backup.env
+```
+
+Press `i`, paste:
 
 ```bash
 export FTP_HOST="ftp.example.com"
-export FTP_USER="your_ftp_username"
-export FTP_PASS="your_ftp_password"
+export FTP_USER="your_ftp_user"
+export FTP_PASS="your_ftp_pass"
 export REMOTE_BACKUP_SUBDIR="pg"
 
-export DATABASES="app_db_1:db_user_1:db_pass_1 app_db_2:db_user_2:db_pass_2"
+export DATABASES="db1:user1:pass1 db2:user2:pass2"
 
 export DB_HOST="127.0.0.1"
 export DB_PORT="5432"
@@ -35,24 +63,38 @@ export LOCAL_BACKUP_DIR="/tmp/pg_backup"
 export FTP_MOUNT_POINT="/mnt/ftp_backup"
 ```
 
-Secure the file:
+Save with:
+
+```
+Esc → :wq → Enter
+```
+
+Secure file:
 
 ```bash
 sudo chmod 600 /etc/pg-backup.env
 ```
 
-## 4. Test scripts manually
+---
+
+## 5. Load variables
 
 ```bash
 source /etc/pg-backup.env
+```
 
+---
+
+## 6. Test scripts
+
+```bash
 ./scripts/backup_to_ftp.sh
 ./scripts/check_remote_backup.sh
 ```
 
-## 5. Setup cron jobs
+---
 
-Edit root cron:
+## 7. Setup cron
 
 ```bash
 sudo crontab -e
@@ -63,63 +105,30 @@ Add:
 ```cron
 MAILTO="you@example.com"
 
-# Backup every 12 hours
-0 */12 * * * . /etc/pg-backup.env && /path/to/scripts/backup_to_ftp.sh
-
-# Daily verification
-0 8 * * * . /etc/pg-backup.env && /path/to/scripts/check_remote_backup.sh
+0 */12 * * * . /etc/pg-backup.env && /opt/postgresql-ftp-backup-example/scripts/backup_to_ftp.sh
+0 8 * * * . /etc/pg-backup.env && /opt/postgresql-ftp-backup-example/scripts/check_remote_backup.sh
 ```
 
-## 6. Logging (optional)
+---
+
+## 8. Email test
+
+```bash
+echo "Test" | mail -s "Test mail" you@example.com
+```
+
+---
+
+## 9. Logs (optional)
 
 ```cron
-0 */12 * * * . /etc/pg-backup.env && /path/to/scripts/backup_to_ftp.sh >> /var/log/pg_backup.log 2>&1
-0 8 * * * . /etc/pg-backup.env && /path/to/scripts/check_remote_backup.sh >> /var/log/pg_backup_check.log 2>&1
+>> /var/log/pg_backup.log 2>&1
 ```
 
-## 7. Email setup
+---
 
-Install postfix:
+## Done
 
-```bash
-sudo apt install postfix
-```
-
-Test email:
-
-```bash
-echo "Test email" | mail -s "Test" you@example.com
-```
-
-## 8. Troubleshooting
-
-### FTP mount issues
-```bash
-mkdir -p /mnt/ftp_backup
-curlftpfs ftp://$FTP_HOST /mnt/ftp_backup -o user=$FTP_USER:$FTP_PASS
-ls -la /mnt/ftp_backup
-fusermount -u /mnt/ftp_backup
-```
-
-### Access denied (530)
-- Check FTP credentials
-- Verify FTP protocol
-
-### Backup missing
-- Check cron logs
-- Verify database access
-
-## 9. Security tips
-
-- Never store credentials in scripts
-- Use restricted env file
-- Consider using .pgpass for DB passwords
-
-## 10. Summary
-
-1. Install packages
-2. Create FTP directory
-3. Configure env file
-4. Test scripts
-5. Setup cron
-6. Monitor logs and email
+Backups now:
+- run every 12 hours
+- verified daily
