@@ -98,9 +98,17 @@ source /etc/pg-backup.env
 
 ---
 
-# 📧 7. Email setup (REQUIRED for notifications)
+# 📧 7. Email setup (Notifications)
 
 Ubuntu does not send emails by default. Use **msmtp (recommended)**.
+
+## Install
+
+```bash
+sudo apt install -y msmtp msmtp-mta mailutils
+```
+
+---
 
 ## Configure SMTP
 
@@ -114,6 +122,7 @@ Press `i` and paste:
 defaults
 auth           on
 tls            on
+tls_starttls   on
 tls_trust_file /etc/ssl/certs/ca-certificates.crt
 logfile        /var/log/msmtp.log
 
@@ -122,17 +131,24 @@ host smtp.gmail.com
 port 587
 from your-email@gmail.com
 user your-email@gmail.com
-password your-app-password
+password your_app_password_without_spaces
 ```
 
-### Gmail users
+---
 
-You must use an App Password:
+## Important (Gmail)
+
+Use an App Password:
 
 1. Enable 2FA
-2. Go to Google → Security → App passwords
-3. Generate password
-4. Use it above
+2. Generate App Password
+3. Remove spaces
+
+Example:
+
+```
+abcd efgh ijkl mnop → abcdefghijklmnop
+```
 
 ---
 
@@ -140,6 +156,15 @@ You must use an App Password:
 
 ```bash
 sudo chmod 600 /etc/msmtprc
+```
+
+---
+
+## Create log file
+
+```bash
+sudo touch /var/log/msmtp.log
+sudo chmod 666 /var/log/msmtp.log
 ```
 
 ---
@@ -152,10 +177,13 @@ echo "Test email" | mail -s "Test" your-email@gmail.com
 
 ---
 
-## Check logs
+## Debug test
 
 ```bash
-cat /var/log/msmtp.log
+printf "Subject: test
+
+Hello
+" | msmtp --debug --account=default your-email@gmail.com
 ```
 
 ---
@@ -169,10 +197,8 @@ sudo crontab -e
 Recommended:
 
 ```cron
-# Backup every 12 hours
 0 */12 * * * . /etc/pg-backup.env && /opt/postgresql-ftp-backup-example/scripts/backup_to_ftp.sh >> /var/log/pg_backup.log 2>&1
 
-# Daily check (email on failure)
 0 8 * * * . /etc/pg-backup.env && /opt/postgresql-ftp-backup-example/scripts/check_remote_backup.sh >/tmp/pg_check.log 2>&1 || mail -s "Backup FAILED on $(hostname)" your-email@gmail.com < /tmp/pg_check.log
 ```
 
@@ -187,25 +213,39 @@ tail -f /tmp/pg_check.log
 
 ---
 
-# 🔧 10. Troubleshooting
+# 🔍 10. Troubleshooting
 
-## Permission denied
-
-```bash
-chmod +x scripts/*.sh
-```
-
-## Test mail
+## msmtp not found
 
 ```bash
-echo "test" | mail -s "test" your-email@gmail.com
+sudo apt install -y msmtp msmtp-mta
 ```
 
-## Cron issues
+---
+
+## No emails
+
+```bash
+cat /var/log/msmtp.log
+```
+
+---
+
+## Auth failed
+
+- wrong password
+- not using app password
+- spaces not removed
+
+---
+
+## mail works but cron doesn't
 
 ```bash
 grep CRON /var/log/syslog
 ```
+
+---
 
 ## FTP issues
 
@@ -216,19 +256,21 @@ ls -la /mnt/ftp_backup
 fusermount -u /mnt/ftp_backup
 ```
 
-## Access denied (530)
+---
+
+## Permission denied
 
 ```bash
-curl -v --user "$FTP_USER:$FTP_PASS" ftp://$FTP_HOST/
+chmod +x scripts/*.sh
 ```
 
 ---
 
-# 🔐 11. Security tips
+# 🔐 11. Security
 
-- Do not store credentials in scripts
-- Keep env file outside repo
-- Restrict access:
+- do not store credentials in repo
+- use env file
+- restrict permissions:
 
 ```bash
 sudo chmod 600 /etc/pg-backup.env
