@@ -1,0 +1,4 @@
+MAILTO="you@example.com"
+
+0 */12 * * * . /etc/pg-backup.env && /path/to/repo/scripts/backup_to_ftp.sh
+0 8 * * * . /etc/pg-backup.env && /path/to/repo/scripts/check_remote_backup.sh

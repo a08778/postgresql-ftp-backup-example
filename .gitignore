@@ -1,14 +1,30 @@
-*.tar
-*.tar.*
-*.jar
-*.exe
-*.msi
-*.deb
-*.zip
-*.tgz
+# Logs
 *.log
-*.log.*
-*.sig
 
-pkg/
-src/
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# Environment / secrets
+.env
+.env.*
+*.env
+
+# Backup files (just in case)
+*.tar
+*.gz
+*.zip
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+
+# Runtime directories (if someone runs scripts locally)
+tmp/
+backup/
+mnt/
